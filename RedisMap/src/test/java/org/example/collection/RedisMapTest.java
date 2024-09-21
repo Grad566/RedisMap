@@ -36,7 +36,8 @@ class RedisMapTest {
     @Test
     public void testSize() {
         redisMap.put("key1", "value1");
-        assertEquals(redisMap.size(), 1);
+        redisMap.put("key2", "value2");
+        assertEquals(redisMap.size(), 2);
     }
 
     @Test
@@ -51,14 +52,14 @@ class RedisMapTest {
     public void testContainsKey() {
         redisMap.put("key1", "value1");
         assertTrue(redisMap.containsKey("key1"));
-        assertFalse(redisMap.containsKey("key2"));
+        assertFalse(redisMap.containsKey("key5"));
     }
 
     @Test
     public void testContainsValue() {
         redisMap.put("key1", "value1");
         assertTrue(redisMap.containsValue("value1"));
-        assertFalse(redisMap.containsValue("value2"));
+        assertFalse(redisMap.containsValue("value6"));
     }
 
     @Test
