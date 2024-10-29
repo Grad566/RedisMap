@@ -1,9 +1,13 @@
 package org.example.collection;
 
+import org.example.exception.RedisException;
 import redis.clients.jedis.Jedis;
+import redis.clients.jedis.exceptions.JedisConnectionException;
+import redis.clients.jedis.resps.ScanResult;
 
 import java.util.AbstractMap;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -16,7 +20,11 @@ public class RedisMap implements Map<String, String> {
     }
     @Override
     public int size() {
-        return (int) jedis.dbSize();
+        try {
+            return (int) jedis.dbSize();
+        } catch (JedisConnectionException e) {
+            throw new RedisException("Error getting database size", e);
+        }
     }
 
     @Override
@@ -26,7 +34,11 @@ public class RedisMap implements Map<String, String> {
 
     @Override
     public boolean containsKey(Object key) {
-        return jedis.exists(key.toString());
+        try {
+            return jedis.exists(key.toString());
+        } catch (JedisConnectionException  e) {
+            throw new RedisException("Error checking existence of key: " + key, e);
+        }
     }
 
     @Override
@@ -36,25 +48,39 @@ public class RedisMap implements Map<String, String> {
 
     @Override
     public String get(Object key) {
-        return jedis.get(key.toString());
+        try {
+            return jedis.get(key.toString());
+        } catch (JedisConnectionException e) {
+            throw new RedisException("Error getting value for key: " + key, e);
+        }
     }
 
     @Override
     public String put(String key, String value) {
-        var prev = get(key);
-        jedis.set(key, value);
-        return prev;
+        try {
+            String prev = get(key);
+            String res = jedis.set(key, value);
+
+            if ("OK".equals(res)) {
+                return prev;
+            } else {
+                throw new RedisException("Failed to set value for key: " + key);
+            }
+
+        } catch (JedisConnectionException  e) {
+            throw new RedisException("Error setting value for key: " + key, e);
+        }
     }
 
     @Override
     public String remove(Object key) {
-        var val = jedis.get(key.toString());
-
-        if (val != null) {
-            jedis.del(key.toString());
+        try {
+            String val = get(key);
+            long res = jedis.del(key.toString());
+            return res == 1 ? val : "-1";
+        } catch (JedisConnectionException e) {
+            throw new RedisException("Error removing key: " + key, e);
         }
-
-        return val;
     }
 
     @Override
@@ -66,12 +92,29 @@ public class RedisMap implements Map<String, String> {
 
     @Override
     public void clear() {
-        jedis.flushDB();
+        try {
+            jedis.flushDB();
+        } catch (JedisConnectionException e) {
+            throw new RedisException("Error clearing the database", e);
+        }
     }
 
     @Override
     public Set<String> keySet() {
-        return jedis.keys("*");
+        try {
+            Set<String> keys = new HashSet<>();
+            String cursor = "0";
+
+            do {
+                ScanResult<String> scanResult = jedis.scan(cursor);
+                keys.addAll(scanResult.getResult());
+                cursor = scanResult.getCursor();
+            } while (!cursor.equals("0"));
+
+            return keys;
+        } catch (JedisConnectionException  e) {
+            throw new RedisException("Error getting key set", e);
+        }
     }
 
     @Override

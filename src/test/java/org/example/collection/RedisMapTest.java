@@ -86,6 +86,7 @@ class RedisMapTest {
         var values = redisMap.values();
         assertTrue(entrySet.contains(new AbstractMap.SimpleEntry<>("key1", "value1")));
         assertTrue(keySet.contains("key1"));
+        assertTrue(keySet.contains("key2"));
         assertTrue(values.contains("value2"));
     }
 
